@@ -1,6 +1,7 @@
 import numpy as np
 import pyedflib
 from sklearn.preprocessing import LabelEncoder
+import glob
 
 
 def parse_raw_data(path):
@@ -39,7 +40,7 @@ def get_intervals(raw_data, interval_len_s=2.0, overlap=0.5):
         raw_data (dict): raw data dictionary obtained by the parse_raw_data function.
         interval_len_s (float): length of each interval (in seconds).
         overlap (float): overlap between neighbouring intervals.
-
+    
     Returns:
         (tuple): a numpy array containing the signal intervals in rows,
                  a numpy array containing the labels (transformed to numerical values) for each interval.
@@ -79,4 +80,46 @@ def get_intervals(raw_data, interval_len_s=2.0, overlap=0.5):
         
     # Return intervals and their labels.
     return np.stack(intervals), target, raw_data["samp_freq"]
+
+
+def get_joined_intervals(folder_path, interval_len_s=2.0, overlap=0.5):
+    """
+    Parse and join data from files into a single long recording.
+
+    Args:
+        folder_path (str): path to folder containing the data files.
+        interval_len_s (float): length of each interval (in seconds).
+        overlap (float): overlap between neighbouring intervals.
+    
+    Returns:
+        (tuple): a numpy array containing the signal intervals in rows,
+                 a numpy array containing the labels (transformed to numerical values) for each interval.
+    """
+    
+    # Initialize variable for keeping the previous obtained sampling frequency.
+    samp_freq_prev = -1.0
+
+    # Initialize lists for intervals and target values.
+    intervals = list()
+    target = list()
+
+    for f_name in glob.glob(folder_path + "*.edf" if folder_path[-1] == "/" else folder_path + "/*.edf"):
+        
+        # Parse data in next file and split into intervals.
+        raw_data_nxt = parse_raw_data(f_name)
+        intervals_nxt, target_nxt, samp_freq_nxt = get_intervals(raw_data_nxt, interval_len_s, overlap)
+
+        # If first data file, set sampling frequency variable.
+        if samp_freq_prev == -1.0:
+            samp_freq_prev = samp_freq_nxt
+        elif samp_freq_prev != samp_freq_nxt: 
+            # If sampling frequency of current data file not equal to that of previous, raise exception.
+            raise ValueError("Sampling frequencies of records in specified folder not equal.")
+        else:
+            # Append intervals and target values obtained from current data file to lists.
+            intervals.append(intervals_nxt)
+            target.append(target_nxt)
+    
+    # Stack intervals and target values and return along with sampling frequency.
+    return np.vstack(intervals), np.hstack(target), samp_freq_prev
 

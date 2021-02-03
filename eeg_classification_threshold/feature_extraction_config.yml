@@ -1,0 +1,19 @@
+---
+
+CSP:
+    use: True
+    f_pass: 8.0
+    f_stop: 30.0
+    taps: 30
+    n_components: 10
+
+spec:
+    use: true
+
+dim_rdc:
+    rdc_method: "LDA"
+    dim: 2
+
+thresh:
+    plot_thresh: True
+    thresh_method: "logistic_regression" 
